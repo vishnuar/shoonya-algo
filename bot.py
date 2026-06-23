@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 tg_app = None
 
 # ─── LOAD SYSTEM ENVIRONMENT VARIABLES ───────────────────────────────────────
-AUTHORIZED_USER_ID = int(os.getenv("TELEGRAM_USER_ID"))
+#AUTHORIZED_USER_ID = int(os.getenv("TELEGRAM_USER_ID"))
 BASE_URL = "https://api.shoonya.com/NorenWClientTP"
 
 CLIENT_ID   = os.getenv("SHOONYA_CLIENT_ID")    
