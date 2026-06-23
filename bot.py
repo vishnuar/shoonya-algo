@@ -15,6 +15,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.service import Service
 
 # Import Telegram components for bot commands and polling loops
 from telegram import Update
@@ -121,14 +122,15 @@ def run_background_login() -> bool:
     options.add_argument("--headless=new")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
     options.add_argument("--window-size=1920,1080")
-    options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
 
-# ─── UPDATE THIS CHROME PATH FOR NIXPACKS ──────────────────────────────
-    options.binary_location = "/usr/bin/google-chrome"
-    options.set_capability("goog:loggingPrefs", {"performance": "ALL"}) 
+# ─── FORCE NATIVE CHROMIUM PATHS FOR LINUX DAEMONS ──────────────────────
+    options.binary_location = "/usr/bin/chromium"
+    chrome_service = Service(executable_path="/usr/bin/chromedriver")
+    options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
     
-    driver = webdriver.Chrome(options=options)
+    driver = webdriver.Chrome(service=chrome_service, options=options)
     wait = WebDriverWait(driver, 30)
     auth_code = None
     
