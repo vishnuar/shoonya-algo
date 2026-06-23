@@ -124,10 +124,9 @@ def run_background_login() -> bool:
     options.add_argument("--window-size=1920,1080")
     options.set_capability("goog:loggingPrefs", {"performance": "ALL"})
 
-# ─── ADD THIS CRITICAL ROUTING PATH FOR RAILWAY ─────────────────────────
-    # Instructs Selenium exactly where the Google Chrome buildpack binary lives
-    options.binary_location = "/app/.apt/usr/bin/google-chrome"
-    options.set_capability("goog:loggingPrefs", {"performance": "ALL"})    
+# ─── UPDATE THIS CHROME PATH FOR NIXPACKS ──────────────────────────────
+    options.binary_location = "/usr/bin/google-chrome"
+    options.set_capability("goog:loggingPrefs", {"performance": "ALL"}) 
     
     driver = webdriver.Chrome(options=options)
     wait = WebDriverWait(driver, 30)
