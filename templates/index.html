@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algo Trading Dashboard</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #ffffff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #1e1e1e;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            text-align: center;
+            width: 90%;
+            max-width: 900px;
+        }
+        .status-box {
+            border: 3px solid #333;
+            padding: 15px;
+            margin-bottom: 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+        .connected { border-color: #2ec4b6; color: #2ec4b6; background-color: rgba(46, 196, 182, 0.1); }
+        .disconnected { border-color: #e71d36; color: #e71d36; background-color: rgba(231, 29, 54, 0.1); }
+        
+        .controls-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+        label {
+            font-size: 0.85rem;
+            color: #aaa;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        select, input {
+            background-color: #2a2a2a;
+            color: #fff;
+            border: 1px solid #444;
+            padding: 12px;
+            font-size: 1rem;
+            border-radius: 6px;
+            outline: none;
+            min-width: 130px;
+        }
+        select:focus, input:focus { border-color: #2ec4b6; }
+        
+        button {
+            font-size: 1.1rem;
+            font-weight: bold;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            text-transform: uppercase;
+        }
+        .btn-go { background-color: #2ec4b6; color: #121212; }
+        .btn-go:hover { background-color: #20a396; }
+        
+        .btn-close {
+            background-color: #e71d36;
+            color: #fff;
+            width: 100%;
+            max-width: 300px;
+            padding: 15px;
+            font-size: 1.4rem;
+            margin-top: 20px;
+            box-shadow: 0 4px 14px rgba(231, 29, 54, 0.4);
+        }
+        .btn-close:hover { background-color: #b8172b; }
+        
+        #log-display {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #0a0a0a;
+            border-radius: 6px;
+            font-family: monospace;
+            text-align: left;
+            font-size: 0.9rem;
+            border-left: 4px solid #2ec4b6;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div id="status-indicator" class="status-box disconnected">
+        API Status: Checking Connection...
+    </div>
+
+    <form id="trade-form">
+        <div class="controls-row">
+            <div class="control-group">
+                <label>Index Underlying</label>
+                <select id="index_type" onchange="updateDefaultLots()">
+                    <option value="N">NIFTY</option>
+                    <option value="S">SENSEX</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Option Flavor</label>
+                <select id="option_type">
+                    <option value="C">CALL</option>
+                    <option value="P">PUT</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Option Chain Shift</label>
+                <select id="offset">
+                    <option value="-2">In The Money Just Above (-2)</option>
+                    <option value="-1">In The Money (-1)</option>
+                    <option value="0" selected>At The Money (0)</option>
+                    <option value="+1">Out Of The Money (+1)</option>
+                    <option value="+2">Out Of The Money Just Below (+2)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Multiplier Lots</label>
+                <input type="number" id="lots" value="1" min="1">
+            </div>
+
+            <div class="control-group" style="padding-top: 22px;">
+                <button type="button" class="btn-go" onclick="executeTrade()">GO</button>
+            </div>
+        </div>
+    </form>
+
+    <button class="btn-close" onclick="executeWipe()">CLOSE</button>
+
+    <div id="log-display"></div>
+</div>
+
+<script>
+    // Live update status parameters instantly upon page view load
+    async function checkStatus() {
+        try {
+            let res = await fetch('/api/status');
+            let data = await res.json();
+            let indicator = document.getElementById('status-indicator');
+            if (data.connected) {
+                indicator.className = "status-box connected";
+                indicator.innerText = "API Status - Connected Successfully";
+            } else {
+                indicator.className = "status-box disconnected";
+                indicator.innerText = "API Status - Disconnected / Token Lapsed";
+            }
+        } catch {
+            console.log("Failed reaching status route endpoints.");
+        }
+    }
+
+    function showLog(text) {
+        let logger = document.getElementById('log-display');
+        logger.style.display = "block";
+        logger.innerHTML = `<strong>[System Log]:</strong> ${text}`;
+    }
+
+    async function executeTrade() {
+        showLog("Transmitting execution strategy calculations to server...");
+        let payload = {
+            index_type: document.getElementById('index_type').value,
+            option_type: document.getElementById('option_type').value,
+            offset: document.getElementById('offset').value,
+            lots: document.getElementById('lots').value
+        };
+        
+        let response = await fetch('/api/trade', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        let result = await response.json();
+        showLog(result.message);
+    }
+
+    async function executeWipe() {
+        if(confirm("Confirm emergency market exit? All open positions will be closed.")) {
+            showLog("Transmitting complete risk liquidation payload...");
+            let response = await fetch('/api/wipe', {method: 'POST'});
+            let result = await response.json();
+            showLog(result.message);
+        }
+    }
+
+    // Auto run status validations
+    checkStatus();
+    setInterval(checkStatus, 15000); // Check engine health metrics every 15 seconds
+</script>
+
+</body>
+</html>
